@@ -1,76 +1,110 @@
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 
-
-public class IscTorrentGUI extends JFrame {
+public class IscTorrentGUI {
+    private Node node;
+    private JFrame frame;
     private JTextField searchField;
-    private JButton searchButton, downloadButton, connectButton;
-    private JList<String> resultsList;
-    private DefaultListModel<String> resultsModel;
+    private JButton searchButton;
+    private JList<String> resultList;
+    private JButton downloadButton;
+    private JButton connectButton;
+    private DefaultListModel<String> listModel;
 
-    public IscTorrentGUI(int port, String sharedFolder) {
-        setTitle("IscTorrent - File Sharing System");
-        setSize(700, 290);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+    public IscTorrentGUI() {
+        frame = new JFrame("IscTorrent");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(600, 400);
 
-        setupUI();
-        setupActions(sharedFolder);
-        setVisible(true);
+        searchField = new JTextField(30);
+        searchButton = new JButton("Procurar");
+        listModel = new DefaultListModel<>();
+        resultList = new JList<>(listModel);
+        downloadButton = new JButton("Descarregar");
+        connectButton = new JButton("Ligar a Nó");
+
+        JPanel panel = new JPanel();
+        panel.add(searchField);
+        panel.add(searchButton);
+        frame.add(panel, BorderLayout.NORTH);
+
+        frame.add(new JScrollPane(resultList), BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.add(downloadButton);
+        bottomPanel.add(connectButton);
+        frame.add(bottomPanel, BorderLayout.SOUTH);
+
+        frame.setVisible(true);
+
+        searchButton.addActionListener(e -> performSearch(searchField.getText()));
+        downloadButton.addActionListener(e -> startDownload(resultList.getSelectedValue()));
+        connectButton.addActionListener(e -> showConnectDialog());
     }
 
-    private void setupUI() {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-
-        JPanel searchPanel = new JPanel(new BorderLayout());
-        searchPanel.add(new JLabel("Search Text:"), BorderLayout.WEST);
-        searchField = new JTextField();
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        searchButton = new JButton("Search");
-        searchPanel.add(searchButton, BorderLayout.EAST);
-        mainPanel.add(searchPanel, BorderLayout.NORTH);
-
-        resultsModel = new DefaultListModel<>();
-        resultsList = new JList<>(resultsModel);
-        JScrollPane scrollPane = new JScrollPane(resultsList);
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
-
-        JPanel buttonPanel = new JPanel(new GridLayout(2, 1));
-        downloadButton = new JButton("Download");
-        connectButton = new JButton("Connect to Node");
-        buttonPanel.add(downloadButton);
-        buttonPanel.add(connectButton);
-        mainPanel.add(buttonPanel, BorderLayout.EAST);
-
-        add(mainPanel);
+    public void setNode(Node node) {
+        this.node = node;
+        SwingUtilities.invokeLater(this::updateFileList); // Ensure GUI updates on EDT
     }
 
-    private void setupActions(String sharedFolder) {
-        connectButton.addActionListener(e -> {
-            String address = JOptionPane.showInputDialog(this, "Enter node address:");
-            // Implement connection logic here
-        });
-
-        searchButton.addActionListener(e -> {
-            String keyword = searchField.getText();
-            // Implement search logic here
-        });
-
-        downloadButton.addActionListener(e -> {
-            String selectedFile = resultsList.getSelectedValue();
-            if (selectedFile != null) {
-                File file = new File(sharedFolder, selectedFile);
-                DownloadTasksManager manager = new DownloadTasksManager();
-                List<FileBlockRequestMessage> requests = manager.createBlockRequestList(file);
-                // Now, handle the download requests
+    private void updateFileList() {
+        if (node != null) {
+            FileManager fileManager = node.getFileManager();
+            List<File> files = fileManager.getSharedFiles();
+            listModel.clear();
+            System.out.println("Updating file list in GUI..."); // Debugging line
+            for (File file : files) {
+                System.out.println("Adding file to listModel: " + file.getName()); // Debugging line
+                listModel.addElement(file.getName());
             }
-        });
-
-
+        }
     }
 
+    private void performSearch(String keyword) {
+        if (node != null) {
+            node.sendSearchRequest(keyword);
+        }
+    }
 
+    private void startDownload(String selectedFile) {
+        if (node != null) {
+            // Logic to start download
+        }
+    }
+
+    private void showConnectDialog() {
+        if (node != null) {
+            // Logic to show connect dialog and connect to another node
+        }
+    }
+
+    public static void main(String[] args) {
+        // Define the port and the directory for shared files
+        int port = 8081;
+        String sharedDirectory = "path/to/shared/files";
+
+        // Initialize the FileManager
+        FileManager fileManager = new FileManager(sharedDirectory);
+
+        // Initialize and start the Node
+        try {
+            Node node = new Node(port, fileManager);
+            Thread serverThread = new Thread(() -> {
+                node.start();
+            });
+            serverThread.start();
+
+            // Initialize the GUI
+            SwingUtilities.invokeLater(() -> {
+                IscTorrentGUI gui = new IscTorrentGUI();
+                gui.setNode(node);
+            });
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

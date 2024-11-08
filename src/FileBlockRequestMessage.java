@@ -1,23 +1,42 @@
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 public class FileBlockRequestMessage {
     private String fileHash;
-    private long offset;
+    private int offset;
     private int length;
 
-    public FileBlockRequestMessage(String fileHash, long offset, int length) {
+    public FileBlockRequestMessage(String fileHash, int offset, int length) {
         this.fileHash = fileHash;
         this.offset = offset;
         this.length = length;
+    }
+
+    public int getLength() {
+        return length;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
+    }
+
+    public int getOffset() {
+        return offset;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
     }
 
     public String getFileHash() {
         return fileHash;
     }
 
-    public long getOffset() {
-        return offset;
+    public void setFileHash(String fileHash) {
+        this.fileHash = fileHash;
     }
 
-    public int getLength() {
-        return length;
-    }
+
 }
+
