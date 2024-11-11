@@ -12,10 +12,10 @@ public class Node {
     private ExecutorService threadPool;
     private List<Socket> connectedNodes;
     private FileManager fileManager;
-
+    private int ThreadPoolnumber =5;
     public Node(int port, FileManager fileManager) throws IOException {
         this.serverSocket = new ServerSocket(port);
-        this.threadPool = Executors.newFixedThreadPool(5); // Example with 5 threads
+        this.threadPool = Executors.newFixedThreadPool(ThreadPoolnumber);
         this.connectedNodes = new ArrayList<>();
         this.fileManager = fileManager;
     }
@@ -54,7 +54,6 @@ public class Node {
                     } else if (message instanceof FileBlockRequestMessage) {
                         handleFileBlockRequest((FileBlockRequestMessage) message, out);
                     }
-                    // Handle other message types...
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
@@ -65,7 +64,9 @@ public class Node {
     public void connectToNode(String address, int port) {
         try {
             Socket socket = new Socket(address, port);
+            //Nós Conectados
             connectedNodes.add(socket);
+            System.out.println("Connected to node at " + address + ":" + port);
             // Handle connection logic
         } catch (IOException e) {
             e.printStackTrace();

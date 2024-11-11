@@ -12,11 +12,11 @@ public class FileManager {
             for (File file : directory.listFiles()) {
                 if (file.isFile()) {
                     sharedFiles.add(file);
-                    System.out.println("File found: " + file.getName()); // Debugging line
+                    System.out.println("File found: " + file.getName()); // Linha de teste
                 }
             }
         } else {
-            System.out.println("Directory not found or is not a directory."); // Debugging line
+            System.out.println("Directory not found or is not a directory."); // Não existe diretórios
         }
     }
 

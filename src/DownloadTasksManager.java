@@ -44,4 +44,16 @@ public class DownloadTasksManager {
     public List<FileBlockRequestMessage> getBlockRequests() {
         return blockRequests;
     }
+    public synchronized void addRequest(FileBlockRequestMessage request) {
+        blockRequests.add(request);
+    }
+
+    public synchronized FileBlockRequestMessage getNextRequest() {
+        if (!blockRequests.isEmpty()) {
+            return blockRequests.remove(0);
+        }
+        return null;
+    }
+
+
 }

@@ -3,8 +3,8 @@ import java.io.IOException;
 
 public static void main(String[] args) {
     // Define the port and the directory for shared files
-    int port = 8081;
-    String sharedDirectory = "C:/Users/Inês Oliveira/Downloads/sharedfolder";
+    int port = 8082;
+    String sharedDirectory = "C:/Users/Inês Oliveira/Downloads/sharedfolder2";
 
     // Initialize the FileManager
     FileManager fileManager = new FileManager(sharedDirectory);
@@ -17,7 +17,7 @@ public static void main(String[] args) {
         });
         serverThread.start();
 
-        // Initialize the GUI
+        // Inicializa o GUI
         SwingUtilities.invokeLater(() -> {
             IscTorrentGUI gui = new IscTorrentGUI();
             gui.setNode(node);

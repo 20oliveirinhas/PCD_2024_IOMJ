@@ -71,25 +71,28 @@ public class IscTorrentGUI {
 
     private void startDownload(String selectedFile) {
         if (node != null) {
-            // Logic to start download
+            // Lógica de Download????
         }
     }
 
     private void showConnectDialog() {
         if (node != null) {
-            // Logic to show connect dialog and connect to another node
+            SwingUtilities.invokeLater(() -> {
+                ConnectionWindow connectionWindow = new ConnectionWindow(node);
+                connectionWindow.setVisible(true);
+            });
         }
     }
 
     public static void main(String[] args) {
-        // Define the port and the directory for shared files
+        // Define Portas e um SharedDirectory para ver se tem ficheiros
         int port = 8081;
         String sharedDirectory = "path/to/shared/files";
 
-        // Initialize the FileManager
+        // Inicializa o FileManager
         FileManager fileManager = new FileManager(sharedDirectory);
 
-        // Initialize and start the Node
+        // Inicializa e faz start ao Node
         try {
             Node node = new Node(port, fileManager);
             Thread serverThread = new Thread(() -> {
@@ -97,7 +100,7 @@ public class IscTorrentGUI {
             });
             serverThread.start();
 
-            // Initialize the GUI
+            // Inicializa o GUI
             SwingUtilities.invokeLater(() -> {
                 IscTorrentGUI gui = new IscTorrentGUI();
                 gui.setNode(node);
