@@ -1,6 +1,7 @@
 import java.io.Serializable;
 
 public class FileSearchResult implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String fileName;
     private long fileSize;
     private String fileHash;

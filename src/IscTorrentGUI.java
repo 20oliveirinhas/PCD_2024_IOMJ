@@ -47,7 +47,8 @@ public class IscTorrentGUI {
 
     public void setNode(Node node) {
         this.node = node;
-        SwingUtilities.invokeLater(this::updateFileList); // Ensure GUI updates on EDT
+        SwingUtilities.invokeLater(this::updateFileList); // Ter a certeza que o GUI faz updates da lista de ficheiros
+        //e mostra
     }
 
     private void updateFileList() {
@@ -55,9 +56,9 @@ public class IscTorrentGUI {
             FileManager fileManager = node.getFileManager();
             List<File> files = fileManager.getSharedFiles();
             listModel.clear();
-            System.out.println("Updating file list in GUI..."); // Debugging line
+            System.out.println("Updating file list in GUI..."); // Linha de teste
             for (File file : files) {
-                System.out.println("Adding file to listModel: " + file.getName()); // Debugging line
+                System.out.println("Adding file to listModel: " + file.getName()); //Linha de teste
                 listModel.addElement(file.getName());
             }
         }
@@ -67,6 +68,15 @@ public class IscTorrentGUI {
         if (node != null) {
             node.sendSearchRequest(keyword);
         }
+    }
+
+    public void updateSearchResults(List<FileSearchResult> results) {
+        SwingUtilities.invokeLater(() -> {
+            listModel.clear();
+            for (FileSearchResult result : results) {
+                listModel.addElement(result.getFileName() + " - " + result.getNodeAddress() + ":" + result.getNodePort());
+            }
+        });
     }
 
     private void startDownload(String selectedFile) {
@@ -84,7 +94,7 @@ public class IscTorrentGUI {
         }
     }
 
-    public static void main(String[] args) {
+    public void main(String[] args) {
         // Define Portas e um SharedDirectory para ver se tem ficheiros
         int port = 8081;
         String sharedDirectory = "path/to/shared/files";
@@ -95,19 +105,20 @@ public class IscTorrentGUI {
         // Inicializa e faz start ao Node
         try {
             Node node = new Node(port, fileManager);
-            Thread serverThread = new Thread(() -> {
-                node.start();
-            });
-            serverThread.start();
 
             // Inicializa o GUI
             SwingUtilities.invokeLater(() -> {
                 IscTorrentGUI gui = new IscTorrentGUI();
-                gui.setNode(node);
+                gui.setNode(node); // Passa o nó para a GUI
+                node.setGui(gui);  // Passa a GUI para o nó
             });
 
+            // Faz o start do Node num thread separado
+            Thread serverThread = new Thread(node::start);
+            serverThread.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 }

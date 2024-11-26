@@ -21,6 +21,7 @@ public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             IscTorrentGUI gui = new IscTorrentGUI();
             gui.setNode(node);
+            node.setGui(gui);
         });
 
     } catch (IOException e) {
