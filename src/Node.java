@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 public class Node {
     private ServerSocket serverSocket;
     private ExecutorService threadPool;
@@ -20,7 +19,6 @@ public class Node {
         this.connectedNodes = new ArrayList<>();
         this.fileManager = fileManager;
     }
-
     public void start() {
         while (true) {
             try {
@@ -32,7 +30,6 @@ public class Node {
             }
         }
     }
-
     public FileManager getFileManager() {
         return fileManager;
     }
@@ -46,12 +43,15 @@ public class Node {
         }
     @Override
     public void run() {
-        try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
-             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
+        ObjectOutputStream out = null;
+        ObjectInputStream in = null;
+        try {
+            out = new ObjectOutputStream(clientSocket.getOutputStream());
+            in = new ObjectInputStream(clientSocket.getInputStream());
+
             Object message;
             while ((message = in.readObject()) != null) {
                 if (message instanceof WordSearchMessage) {
-                    System.out.println("Received WordSearchMessage: " + ((WordSearchMessage) message).getKeyword());
                     handleSearchRequest((WordSearchMessage) message, out);
                 }
             }
@@ -59,9 +59,10 @@ public class Node {
             System.out.println("Client closed the connection: " + clientSocket);
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Error in communication: " + e.getMessage());
-            e.printStackTrace();
         } finally {
             try {
+                if (out != null) out.close();
+                if (in != null) in.close();
                 clientSocket.close();
                 System.out.println("Socket closed for client: " + clientSocket);
             } catch (IOException e) {
@@ -69,9 +70,7 @@ public class Node {
             }
         }
     }
-
 }
-
     public void connectToNode(String address, int port) {
         try {
             Socket socket = new Socket(address, port);
@@ -84,19 +83,15 @@ public class Node {
             e.printStackTrace();
         }
     }
-
-
     public void sendSearchRequest(String keyword) {
         WordSearchMessage searchMessage = new WordSearchMessage(keyword);
         for (Socket socket : connectedNodes) {
             try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                  ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
-
                 System.out.println("Client: Sending search request with keyword '" + keyword + "' to node " + socket.getRemoteSocketAddress());
                 out.writeObject(searchMessage);
                 out.flush();
                 System.out.println("Client: Search request sent. Awaiting response...");
-
                 // Ler a resposta do servidor
                 Object response = in.readObject();
                 if (response instanceof List) {
@@ -113,20 +108,15 @@ public class Node {
                 } else {
                     System.out.println("Client: Unexpected response type received.");
                 }
-
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Client: Error in communication - " + e.getMessage());
                 e.printStackTrace();
             }
         }
     }
-
-
     public void setGui(IscTorrentGUI gui) {
         this.gui = gui;
-        System.out.println("GUI configurada com sucesso no Node.");
     }
-
     private void handleSearchRequest(WordSearchMessage searchMessage, ObjectOutputStream out) {
         try {
             List<FileSearchResult> results = searchFiles(searchMessage.getKeyword());
@@ -140,8 +130,6 @@ public class Node {
             e.printStackTrace();
         }
     }
-
-
     private List<FileSearchResult> searchFiles(String keyword) {
         List<FileSearchResult> results = new ArrayList<>();
         for (File file : fileManager.getSharedFiles()) {
@@ -157,7 +145,6 @@ public class Node {
         }
         return results;
     }
-
     private void handleFileBlockRequest(FileBlockRequestMessage requestMessage, ObjectOutputStream out) {
         File file = new File("path/to/shared/files", requestMessage.getFileHash());
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
@@ -190,7 +177,4 @@ public class Node {
             return null;
         }
     }
-
-
-
 }
