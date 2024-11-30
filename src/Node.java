@@ -145,12 +145,14 @@ public class Node {
                 results.add(new FileSearchResult(
                         file.getName(),
                         file.length(),
-                        calculateHash(file),  // Hash do arquivo
-                        "127.0.0.1",          // Endereço do nó (ajustar para real)
+                        calculateHash(file),  // Hash do ficheiro
+                        "127.0.0.1",          // Endereço do nó
                         serverSocket.getLocalPort()
                 ));
+                System.out.println("Server: Ficheiro encontrado: " + file.getName());
             }
         }
+        System.out.println("Server: Total de ficheiros encontrados para '" + keyword + "': " + results.size());
         return results;
     }
     private void handleFileBlockRequest(FileBlockRequestMessage requestMessage, ObjectOutputStream out) {
@@ -218,10 +220,11 @@ public class Node {
         System.out.println("Node: Verificando quais nós possuem o ficheiro: " + fileName);
 
         for (Socket socket : connectedNodes) {
+            System.out.println("Numero de nos Conectados:"+ connectedNodes.size());
             try {
-                // Reutilize ou inicialize os streams corretamente
-                ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+                // Inicializar ou reutilizar streams
+                //ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                //ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
                 // Enviar mensagem de pesquisa
                 WordSearchMessage searchMessage = new WordSearchMessage(fileName);
@@ -233,7 +236,9 @@ public class Node {
                 Object response = in.readObject();
                 if (response instanceof List) {
                     List<FileSearchResult> results = (List<FileSearchResult>) response;
+                    System.out.println("Cliente: Resultados recebidos: " + results.size());
                     for (FileSearchResult result : results) {
+                        System.out.println("Cliente: Ficheiro encontrado: " + result.getFileName() + " no nó " + result.getNodeAddress());
                         if (result.getFileName().equals(fileName)) {
                             nodesWithFile.add(socket);
                             System.out.println("Node: Nó encontrado com o ficheiro: " + result.getNodeAddress() + ":" + result.getNodePort());
