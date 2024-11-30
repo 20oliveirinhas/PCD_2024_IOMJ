@@ -1,19 +1,31 @@
 import java.io.File;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 
 public class DownloadTasksManager {
     private List<FileBlockRequestMessage> blockRequests;
+    private Map<Integer, byte[]> receivedBlocks; // Para armazenar blocos descarregados
+    private int totalBlocks;
+    private String outputFilePath;
 
-    public DownloadTasksManager(File file) {
-        blockRequests = new ArrayList<>();
+
+    public DownloadTasksManager(File file, String outputFilePath) {
+        this.blockRequests = new ArrayList<>();
+        this.receivedBlocks = new HashMap<>();
+        this.outputFilePath = outputFilePath;
+
         String fileHash = calculateHash(file);
         int blockSize = 10240; // 10 KB
         long fileSize = file.length();
+        this.totalBlocks = (int) Math.ceil((double) fileSize / blockSize);
+
         for (int offset = 0; offset < fileSize; offset += blockSize) {
             int length = (int) Math.min(blockSize, fileSize - offset);
             blockRequests.add(new FileBlockRequestMessage(fileHash, offset, length));
@@ -49,11 +61,36 @@ public class DownloadTasksManager {
     }
 
     public synchronized FileBlockRequestMessage getNextRequest() {
-        if (!blockRequests.isEmpty()) {
-            return blockRequests.remove(0);
-        }
-        return null;
+        return blockRequests.isEmpty() ? null : blockRequests.remove(0);
     }
 
+    public synchronized void addReceivedBlock(int offset, byte[] data) {
+        receivedBlocks.put(offset, data);
+        if (receivedBlocks.size() == totalBlocks) {
+            notifyAll(); // Notificar que todos os blocos foram descarregados
+        }
+    }
 
+    public synchronized void waitForCompletion() {
+        while (receivedBlocks.size() < totalBlocks) {
+            try {
+                wait(); // Esperar até todos os blocos estarem descarregados
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    public void writeToDisk() throws IOException {
+        try (RandomAccessFile raf = new RandomAccessFile(outputFilePath, "rw")) {
+            for (int offset = 0; offset < totalBlocks * 10240; offset += 10240) {
+                byte[] data = receivedBlocks.get(offset);
+                if (data != null) {
+                    raf.seek(offset);
+                    raf.write(data);
+                }
+            }
+        }
+    }
 }
+

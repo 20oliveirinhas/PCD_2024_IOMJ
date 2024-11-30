@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.net.Socket;
 import java.util.List;
 
 public class IscTorrentGUI {
@@ -80,8 +81,24 @@ public class IscTorrentGUI {
     }
 
     private void startDownload(String selectedFile) {
-        if (node != null) {
-            // Lógica de Download????
+        if (node != null && selectedFile != null) {
+            String[] fileInfo = selectedFile.split(" - ");
+            String fileName = fileInfo[0]; // Nome do ficheiro
+
+            // Obter a lista de nós com o ficheiro
+            List<Socket> availableNodes = node.getNodesWithFile(fileName);
+            if (availableNodes.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Nenhum nó disponível para este ficheiro!");
+                return;
+            }
+
+            // Configurar o DownloadTasksManager
+            String outputFilePath = "downloads/" + fileName;
+            File fileToDownload = new File(outputFilePath);
+            DownloadTasksManager manager = new DownloadTasksManager(fileToDownload, outputFilePath);
+
+            // Iniciar o processo de descarregamento
+            node.startFileDownload(availableNodes, manager);
         }
     }
 

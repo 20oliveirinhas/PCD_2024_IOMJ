@@ -1,8 +1,7 @@
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.Serializable;
 
-public class FileBlockRequestMessage {
+public class FileBlockRequestMessage implements Serializable {
+    private static final long serialVersionUID = 1L; // Versão para serialização
     private String fileHash;
     private int offset;
     private int length;
@@ -36,7 +35,4 @@ public class FileBlockRequestMessage {
     public void setFileHash(String fileHash) {
         this.fileHash = fileHash;
     }
-
-
 }
-
