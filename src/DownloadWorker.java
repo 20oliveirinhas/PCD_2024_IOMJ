@@ -1,3 +1,4 @@
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -30,6 +31,8 @@ public class DownloadWorker implements Runnable {
                     manager.addReceivedBlock(request.getOffset(), answer.getData());
                 }
             }
+        } catch (EOFException e) {
+            System.out.println("Conexão encerrada corretamente.");
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }

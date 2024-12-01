@@ -92,9 +92,16 @@ public class IscTorrentGUI {
                 return;
             }
 
+            // Certificar que o diretório existe
+            File downloadDir = new File("C:/Users/Inês Oliveira/Downloads");
+            if (!downloadDir.exists()) {
+                downloadDir.mkdirs(); // Cria o diretório se necessário
+            }
+
             // Configurar o DownloadTasksManager
-            String outputFilePath = "downloads/" + fileName;
+            String outputFilePath = downloadDir.getAbsolutePath() + File.separator + fileName;
             File fileToDownload = new File(outputFilePath);
+
             DownloadTasksManager manager = new DownloadTasksManager(fileToDownload, outputFilePath);
 
             // Iniciar o processo de descarregamento

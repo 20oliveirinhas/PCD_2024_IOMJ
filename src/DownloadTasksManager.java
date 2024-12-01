@@ -21,6 +21,15 @@ public class DownloadTasksManager {
         this.receivedBlocks = new HashMap<>();
         this.outputFilePath = outputFilePath;
 
+        try {
+            if (!file.exists()) {
+                file.createNewFile(); // Garante que o ficheiro é criado se não existir
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao criar o ficheiro de download: " + file.getAbsolutePath());
+            e.printStackTrace();
+        }
+
         String fileHash = calculateHash(file);
         int blockSize = 10240; // 10 KB
         long fileSize = file.length();
@@ -90,6 +99,10 @@ public class DownloadTasksManager {
                     raf.write(data);
                 }
             }
+            System.out.println("Ficheiro escrito em: " + outputFilePath);
+        } catch (IOException e) {
+            System.err.println("Erro ao escrever o ficheiro: " + outputFilePath);
+            throw e;
         }
     }
 }
