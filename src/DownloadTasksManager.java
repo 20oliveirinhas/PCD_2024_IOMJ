@@ -70,6 +70,7 @@ public class DownloadTasksManager {
     }
 
     public synchronized FileBlockRequestMessage getNextRequest() {
+       System.out.println("Cheguei ao GetNextRequest");
         return blockRequests.isEmpty() ? null : blockRequests.remove(0);
     }
 

@@ -82,29 +82,30 @@ public class IscTorrentGUI {
 
     private void startDownload(String selectedFile) {
         if (node != null && selectedFile != null) {
+            // Extraindo informações do ficheiro
             String[] fileInfo = selectedFile.split(" - ");
             String fileName = fileInfo[0]; // Nome do ficheiro
 
-            // Obter a lista de nós com o ficheiro
+            // Obter a lista de nós que possuem o ficheiro
             List<Socket> availableNodes = node.getNodesWithFile(fileName);
             if (availableNodes.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Nenhum nó disponível para este ficheiro!");
                 return;
             }
 
-            // Certificar que o diretório existe
+            // Configuração do diretório de download
             File downloadDir = new File("C:/Users/Inês Oliveira/Downloads");
             if (!downloadDir.exists()) {
-                downloadDir.mkdirs(); // Cria o diretório se necessário
+                downloadDir.mkdirs();
             }
-
-            // Configurar o DownloadTasksManager
+            // Preparar a localização e criar o `DownloadTasksManager`
             String outputFilePath = downloadDir.getAbsolutePath() + File.separator + fileName;
-            File fileToDownload = new File(outputFilePath);
+            File outputFile = new File(outputFilePath);
 
-            DownloadTasksManager manager = new DownloadTasksManager(fileToDownload, outputFilePath);
+            // Criar o gestor de tarefas de download
+            DownloadTasksManager manager = new DownloadTasksManager(outputFile, outputFilePath);
 
-            // Iniciar o processo de descarregamento
+            // Iniciar a transferência
             node.startFileDownload(availableNodes, manager);
         }
     }
@@ -116,33 +117,5 @@ public class IscTorrentGUI {
                 connectionWindow.setVisible(true);
             });
         }
-    }
-
-    public void main(String[] args) {
-        // Define Portas e um SharedDirectory para ver se tem ficheiros
-        int port = 8081;
-        String sharedDirectory = "path/to/shared/files";
-
-        // Inicializa o FileManager
-        FileManager fileManager = new FileManager(sharedDirectory);
-
-        // Inicializa e faz start ao Node
-        try {
-            Node node = new Node(port, fileManager);
-
-            // Inicializa o GUI
-            SwingUtilities.invokeLater(() -> {
-                IscTorrentGUI gui = new IscTorrentGUI();
-                gui.setNode(node); // Passa o nó para a GUI
-                node.setGui(gui);  // Passa a GUI para o nó
-            });
-
-            // Faz o start do Node num thread separado
-            Thread serverThread = new Thread(node::start);
-            serverThread.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
     }
 }

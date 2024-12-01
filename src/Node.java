@@ -43,24 +43,27 @@ public class Node {
 // os Nodes
     private class ClientHandler implements Runnable {
         private Socket clientSocket;
-
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
         public ClientHandler(Socket clientSocket) {
             this.clientSocket = clientSocket;
         }
     @Override
     public void run() {
-        ObjectOutputStream out = null;
-        ObjectInputStream in = null;
         try {
-            out = new ObjectOutputStream(clientSocket.getOutputStream());
-            in = new ObjectInputStream(clientSocket.getInputStream());
+            this.out = new ObjectOutputStream(clientSocket.getOutputStream());
+            this.in = new ObjectInputStream(clientSocket.getInputStream());
 
             while (true) {
                 Object message = in.readObject();
+                System.out.println("Servidor: Mensagem recebida do tipo " + message.getClass().getSimpleName());
+
                 if (message instanceof WordSearchMessage) {
                     handleSearchRequest((WordSearchMessage) message, out);
                 } else if (message instanceof FileBlockRequestMessage) {
+                    System.out.println("Cheguei ao fileblockrequestmessage do lado do Run do ClientHandler");
                     handleFileBlockRequest((FileBlockRequestMessage) message, out);
+
                 } else {
                     System.out.println("Mensagem inesperada recebida: " + message.getClass().getName());
                 }
@@ -73,7 +76,10 @@ public class Node {
             System.err.println("Erro ao interpretar mensagem recebida: " + e.getMessage());
         } finally {
             // Certifique-se de que o socket é desconectado ao sair do loop
-            disconnectNode(clientSocket);
+            if (!clientSocket.isClosed() && clientSocket != null) {
+                disconnectNode(clientSocket);
+            }
+
             System.out.println("Conexão encerrada com o cliente: " + clientSocket);
         }
     }
@@ -160,28 +166,28 @@ public class Node {
             System.out.println("Servidor: Pedido de bloco recebido. Offset: " + requestMessage.getOffset() +
                     ", Tamanho: " + requestMessage.getLength());
 
-            // Localize o ficheiro
             File file = new File("path/to/shared/files", requestMessage.getFileHash());
-            if (!file.exists()) {
+            if (!file.exists() || !file.isFile()) {
                 System.err.println("Servidor: Ficheiro não encontrado para o hash: " + requestMessage.getFileHash());
                 return;
             }
 
-            // Ler o bloco do ficheiro
             try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
                 byte[] buffer = new byte[requestMessage.getLength()];
                 raf.seek(requestMessage.getOffset());
                 int bytesRead = raf.read(buffer);
 
-                // Enviar a resposta
-                FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(buffer);
-                out.writeObject(answerMessage);
-                out.flush();
-                System.out.println("Servidor: Bloco enviado. Tamanho: " + bytesRead);
+                if (bytesRead > 0) {
+                    FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(buffer);
+                    out.writeObject(answerMessage);
+                    out.flush();
+                    System.out.println("Servidor: Bloco enviado com tamanho: " + bytesRead);
+                } else {
+                    System.err.println("Servidor: Bloco vazio lido do ficheiro.");
+                }
             }
         } catch (IOException e) {
-            System.err.println("Servidor: Erro ao processar pedido de bloco: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Servidor: Erro ao processar o pedido de bloco - " + e.getMessage());
         }
     }
 // Por confirmar ainda não está a ser utilizada
@@ -208,7 +214,9 @@ public class Node {
         try {
             if (connectedNodes.contains(socket)) {
                 connectedNodes.remove(socket);
-                socket.close();
+                if (!socket.isClosed()) {
+                    socket.close();
+                }
                 System.out.println("Socket desconectado: " + socket);
             }
         } catch (IOException e) {
@@ -222,9 +230,6 @@ public class Node {
         for (Socket socket : connectedNodes) {
             System.out.println("Numero de nos Conectados:"+ connectedNodes.size());
             try {
-                // Inicializar ou reutilizar streams
-                //ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-                //ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
                 // Enviar mensagem de pesquisa
                 WordSearchMessage searchMessage = new WordSearchMessage(fileName);
@@ -234,6 +239,7 @@ public class Node {
 
                 // Ler a resposta
                 Object response = in.readObject();
+                System.out.println("Resposta Recebida no GetNodesWithFiles" + response);
                 if (response instanceof List) {
                     List<FileSearchResult> results = (List<FileSearchResult>) response;
                     System.out.println("Cliente: Resultados recebidos: " + results.size());
@@ -262,18 +268,15 @@ public class Node {
 
     public void startFileDownload(List<Socket> nodeSockets, DownloadTasksManager manager) {
         ExecutorService threadPool = Executors.newFixedThreadPool(nodeSockets.size());
-
         for (Socket socket : nodeSockets) {
             threadPool.execute(new DownloadWorker(socket, manager));
         }
-
         threadPool.shutdown();
         try {
             threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-
         manager.waitForCompletion();
         try {
             manager.writeToDisk();
