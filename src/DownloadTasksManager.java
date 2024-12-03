@@ -8,69 +8,52 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
-
 public class DownloadTasksManager {
-    private List<FileBlockRequestMessage> blockRequests;
-    private Map<Integer, byte[]> receivedBlocks; // Para armazenar blocos descarregados
-    private int totalBlocks;
-    private String outputFilePath;
-
-
-    public DownloadTasksManager(File file, String outputFilePath) {
+    private final List<FileBlockRequestMessage> blockRequests;
+    private final Map<Integer, byte[]> receivedBlocks; // Para armazenar blocos descarregados
+    private final int totalBlocks;
+    private final String outputFilePath;
+    private long startTime;
+    private String fileName;
+    public DownloadTasksManager(File file, String outputFilePath, long fileSize, String fileHash) {
+        System.out.println("Criando DownloadTasksManager para o ficheiro: " + file);
         this.blockRequests = new ArrayList<>();
         this.receivedBlocks = new HashMap<>();
         this.outputFilePath = outputFilePath;
-
+        this.fileName = file.getName();
+        // Verificar e criar o ficheiro local, se necessário
         try {
             if (!file.exists()) {
-                file.createNewFile(); // Garante que o ficheiro é criado se não existir
+                System.out.println("Ficheiro não existe. Criando: " + file.getAbsolutePath());
+                file.createNewFile();
             }
         } catch (IOException e) {
-            System.err.println("Erro ao criar o ficheiro de download: " + file.getAbsolutePath());
-            e.printStackTrace();
+            System.err.println("Erro ao criar o ficheiro local: " + file.getAbsolutePath());
+            throw new RuntimeException(e);
         }
 
-        String fileHash = calculateHash(file);
-        int blockSize = 10240; // 10 KB
-        long fileSize = file.length();
-        this.totalBlocks = (int) Math.ceil((double) fileSize / blockSize);
+        // Validar o tamanho do ficheiro
+        if (fileSize <= 0) {
+            throw new IllegalArgumentException("Erro: O tamanho do ficheiro é inválido: " + fileSize);
+        }
 
+        // Criar os blocos
+        int blockSize = 10240; // Tamanho de bloco: 10 KB
+        this.totalBlocks = (int) Math.ceil((double) fileSize / blockSize);
         for (int offset = 0; offset < fileSize; offset += blockSize) {
             int length = (int) Math.min(blockSize, fileSize - offset);
             blockRequests.add(new FileBlockRequestMessage(fileHash, offset, length));
         }
-    }
 
-    private String calculateHash(File file) {
-
-        try (FileInputStream fis = new FileInputStream(file)) {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] byteArray = new byte[1024];
-            int bytesCount;
-            while ((bytesCount = fis.read(byteArray)) != -1) {
-                digest.update(byteArray, 0, bytesCount);
-            }
-            byte[] bytes = digest.digest();
-            StringBuilder sb = new StringBuilder();
-            for (byte b : bytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException | IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+        System.out.println("Total de blocos criados: " + blockRequests.size());
     }
 
     public List<FileBlockRequestMessage> getBlockRequests() {
         return blockRequests;
     }
-    public synchronized void addRequest(FileBlockRequestMessage request) {
-        blockRequests.add(request);
-    }
 
     public synchronized FileBlockRequestMessage getNextRequest() {
-       System.out.println("Cheguei ao GetNextRequest");
+        System.out.println("Obtendo próximo pedido de bloco...");
         return blockRequests.isEmpty() ? null : blockRequests.remove(0);
     }
 
@@ -98,13 +81,32 @@ public class DownloadTasksManager {
                 if (data != null) {
                     raf.seek(offset);
                     raf.write(data);
+                    System.out.println("Escrevendo bloco: Offset " + offset + ", Bytes: " + data.length);
+                } else {
+                    System.err.println("Bloco em falta no offset: " + offset);
                 }
             }
-            System.out.println("Ficheiro escrito em: " + outputFilePath);
+            System.out.println("Ficheiro escrito com sucesso: " + outputFilePath);
         } catch (IOException e) {
             System.err.println("Erro ao escrever o ficheiro: " + outputFilePath);
             throw e;
         }
     }
-}
+    public void startDownloadTimer() {
+        this.startTime = System.currentTimeMillis();
+    }
+    public long getDownloadDuration() {
+        return System.currentTimeMillis() - this.startTime;
+    }
 
+    public int getTotalBlocks(){
+        return this.totalBlocks;
+    }
+    public int getTotalBytesDownloaded() {
+        // Soma o tamanho de todos os dados descarregados
+        return receivedBlocks.values().stream().mapToInt(data -> data.length).sum();
+    }
+    public String getFileName() {
+        return fileName;
+    }
+}

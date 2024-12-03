@@ -133,7 +133,7 @@ public class Node {
     }
     private void handleSearchRequest(WordSearchMessage searchMessage, ObjectOutputStream out) {
         try {
-            List<FileSearchResult> results = searchFiles(searchMessage.getKeyword());
+            List<FileSearchResult> results =  searchFiles(searchMessage.getKeyword());
             System.out.println("Server: Found " + results.size() + " result(s) for keyword '" + searchMessage.getKeyword() + "'");
             System.out.println("Server: Sending results to client...");
             out.writeObject(results);
@@ -155,7 +155,7 @@ public class Node {
                         "127.0.0.1",          // Endereço do nó
                         serverSocket.getLocalPort()
                 ));
-                System.out.println("Server: Ficheiro encontrado: " + file.getName());
+                System.out.println("Server: Ficheiro encontrado: " + file.getName() );
             }
         }
         System.out.println("Server: Total de ficheiros encontrados para '" + keyword + "': " + results.size());
@@ -166,7 +166,7 @@ public class Node {
             System.out.println("Servidor: Pedido de bloco recebido. Offset: " + requestMessage.getOffset() +
                     ", Tamanho: " + requestMessage.getLength());
 
-            File file = new File("path/to/shared/files", requestMessage.getFileHash());
+            File file = fileManager.getFileByHash(requestMessage.getFileHash());
             if (!file.exists() || !file.isFile()) {
                 System.err.println("Servidor: Ficheiro não encontrado para o hash: " + requestMessage.getFileHash());
                 return;
@@ -266,27 +266,73 @@ public class Node {
         return nodesWithFile;
     }
 
+
     public void startFileDownload(List<Socket> nodeSockets, DownloadTasksManager manager) {
         ExecutorService threadPool = Executors.newFixedThreadPool(nodeSockets.size());
+        System.out.println("Cheguei ao StartFileDownload");
+        // Cria uma thread para cada socket
         for (Socket socket : nodeSockets) {
-            threadPool.execute(new DownloadWorker(socket, manager));
+            threadPool.execute(() -> handleFileDownload(socket, manager));
         }
+
         threadPool.shutdown();
         try {
             threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+
+        // Espera pela conclusão do descarregamento
         manager.waitForCompletion();
         try {
             manager.writeToDisk();
             System.out.println("Download completo e ficheiro escrito em disco!");
+            long duration = manager.getDownloadDuration();
+            int totalBlocks = manager.getTotalBlocks();
+            int bytesDownloaded = manager.getTotalBytesDownloaded();
+            gui.showDownloadResults(manager.getFileName(), duration,totalBlocks,bytesDownloaded);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private void handleFileDownload(Socket socket, DownloadTasksManager manager) {
+        try {
+            System.out.println("Node: Usando streams já inicializados para " + socket.getRemoteSocketAddress());
 
+            while (!socket.isClosed()) {
 
+                FileBlockRequestMessage request = manager.getNextRequest();
+                if (request == null) {
+                    System.err.println("Nenhum pedido de bloco encontrado no manager.");
+                    break;
+                }
+
+                // Envia o pedido de bloco
+                synchronized (out) {
+                    out.writeObject(request);
+                    out.flush();
+                    System.out.println("Node: Pedido enviado.");
+                }
+
+                // Recebe a resposta
+                synchronized (in) {
+                    Object response = in.readObject();
+                    if (response instanceof FileBlockAnswerMessage) {
+                        FileBlockAnswerMessage answer = (FileBlockAnswerMessage) response;
+                        manager.addReceivedBlock(request.getOffset(), answer.getData());
+                        System.out.println("Node: Bloco recebido.");
+                    } else {
+                        System.err.println("Node: Resposta inesperada.");
+                    }
+                }
+            }
+        } catch (EOFException e) {
+            System.err.println("Node: Conexão encerrada inesperadamente.");
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 
 }
+

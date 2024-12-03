@@ -8,7 +8,6 @@ public static void main(String[] args) {
 
     // Initialize the FileManager
     FileManager fileManager = new FileManager(sharedDirectory);
-
     // Initialize and start the Node
     try {
         Node node = new Node(port, fileManager);
@@ -23,7 +22,6 @@ public static void main(String[] args) {
             gui.setNode(node);
             node.setGui(gui);
         });
-
     } catch (IOException e) {
         e.printStackTrace();
     }
