@@ -190,7 +190,7 @@ public class Node {
             System.err.println("Servidor: Erro ao processar o pedido de bloco - " + e.getMessage());
         }
     }
-// Por confirmar ainda não está a ser utilizada
+
     private String calculateHash(File file) {
         try (FileInputStream fis = new FileInputStream(file)) {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -266,22 +266,20 @@ public class Node {
         return nodesWithFile;
     }
 
-
     public void startFileDownload(List<Socket> nodeSockets, DownloadTasksManager manager) {
         ExecutorService threadPool = Executors.newFixedThreadPool(nodeSockets.size());
         System.out.println("Cheguei ao StartFileDownload");
         // Cria uma thread para cada socket
         for (Socket socket : nodeSockets) {
             threadPool.execute(() -> handleFileDownload(socket, manager));
+            manager.setMainSupplier(socket.getRemoteSocketAddress().toString());
         }
-
         threadPool.shutdown();
         try {
             threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-
         // Espera pela conclusão do descarregamento
         manager.waitForCompletion();
         try {
@@ -290,7 +288,7 @@ public class Node {
             long duration = manager.getDownloadDuration();
             int totalBlocks = manager.getTotalBlocks();
             int bytesDownloaded = manager.getTotalBytesDownloaded();
-            gui.showDownloadResults(manager.getFileName(), duration,totalBlocks,bytesDownloaded);
+            gui.showDownloadResults(manager.getFileName(), duration,totalBlocks,bytesDownloaded, manager.getMainSupplier());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -299,22 +297,18 @@ public class Node {
     private void handleFileDownload(Socket socket, DownloadTasksManager manager) {
         try {
             System.out.println("Node: Usando streams já inicializados para " + socket.getRemoteSocketAddress());
-
             while (!socket.isClosed()) {
-
                 FileBlockRequestMessage request = manager.getNextRequest();
                 if (request == null) {
                     System.err.println("Nenhum pedido de bloco encontrado no manager.");
                     break;
                 }
-
                 // Envia o pedido de bloco
                 synchronized (out) {
                     out.writeObject(request);
                     out.flush();
                     System.out.println("Node: Pedido enviado.");
                 }
-
                 // Recebe a resposta
                 synchronized (in) {
                     Object response = in.readObject();

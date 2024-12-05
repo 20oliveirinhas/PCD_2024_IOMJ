@@ -15,12 +15,14 @@ public class DownloadTasksManager {
     private final String outputFilePath;
     private long startTime;
     private String fileName;
+    private String mainSupplier;
     public DownloadTasksManager(File file, String outputFilePath, long fileSize, String fileHash) {
         System.out.println("Criando DownloadTasksManager para o ficheiro: " + file);
         this.blockRequests = new ArrayList<>();
         this.receivedBlocks = new HashMap<>();
         this.outputFilePath = outputFilePath;
         this.fileName = file.getName();
+
         // Verificar e criar o ficheiro local, se necessário
         try {
             if (!file.exists()) {
@@ -109,4 +111,12 @@ public class DownloadTasksManager {
     public String getFileName() {
         return fileName;
     }
+    public void setMainSupplier(String supplier) {
+        this.mainSupplier = supplier;
+    }
+
+    public String getMainSupplier() {
+        return mainSupplier;
+    }
+
 }

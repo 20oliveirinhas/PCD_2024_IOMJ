@@ -157,17 +157,19 @@ public class IscTorrentGUI {
             });
         }
     }
-    public void showDownloadResults(String filename, long duration, int TotalBlocks, int BytesDownloaded){
+    public void showDownloadResults(String filename, long duration, int TotalBlocks, int BytesDownloaded, String SupplierAdreess){
         JDialog dialog = new JDialog(frame, "Resultados do Descarregamento", true);
         dialog.setSize(400, 250);
         dialog.setLayout(new BorderLayout());
         String message = String.format(
-                "<html><h2>Descarregamento concluído!</h2>" +
+                "<html><h2>Descarga Completa</h2>" +
                         "<p><b>Ficheiro:</b> %s</p>" +
-                        "<p><b>Duração:</b> %d ms</p>" +
+                        "<p><b>Tempo Decorrido:</b> %d ms</p>" +
                         "<p><b>Total de Blocos:</b> %d</p>" +
-                        "<p><b>Total de Bytes:</b> %d</p></html>",
-                filename, duration, TotalBlocks, BytesDownloaded
+                        "<p><b>Total de Bytes:</b> %d</p>" +
+                        "<p><b>Fornecedor:</b> %s</p>" +
+                        "</html>",
+                filename, duration, TotalBlocks, BytesDownloaded, SupplierAdreess
         );
         JLabel messageLabel = new JLabel(message, SwingConstants.CENTER);
         JButton okButton = new JButton("OK");
